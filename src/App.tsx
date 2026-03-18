@@ -55,6 +55,7 @@ export default function App() {
   const [data, setData] = useState<LelayuData>(initialData);
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -70,9 +71,11 @@ export default function App() {
   };
 
   const addMourner = () => {
+    const newId = Date.now().toString();
+    setLastAddedId(newId);
     setData((prev) => ({
       ...prev,
-      mourners: [...prev.mourners, { id: Date.now().toString(), name: '', relation: '' }],
+      mourners: [...prev.mourners, { id: newId, name: '', relation: '' }],
     }));
   };
 
@@ -407,6 +410,7 @@ export default function App() {
                         <input
                           type="text"
                           value={mourner.name}
+                          autoFocus={mourner.id === lastAddedId}
                           onChange={(e) => handleMournerChange(mourner.id, 'name', e.target.value)}
                           className="flex-1 px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10"
                           placeholder="Nama"
