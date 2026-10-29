@@ -87,15 +87,11 @@ export default function App() {
   };
 
   const generatePDF = async () => {
-    // We need to make sure the preview is rendered even if the tab is 'edit'
-    // For simplicity, we'll switch to preview tab briefly or ensure it's in the DOM
     setIsGenerating(true);
 
-    // If we are in edit mode, we might need a hidden preview or switch briefly
     const wasInEdit = activeTab === 'edit';
     if (wasInEdit) setActiveTab('preview');
 
-    // Wait for state update and render
     setTimeout(async () => {
       if (!previewRef.current) {
         setIsGenerating(false);
@@ -103,32 +99,49 @@ export default function App() {
       }
 
       try {
-        const canvas = await html2canvas(previewRef.current, {
+        const element = previewRef.current;
+        const canvas = await html2canvas(element, {
           scale: 2,
           useCORS: true,
           logging: false,
+          scrollY: 0,
+          scrollX: 0,
         });
 
         const imgData = canvas.toDataURL('image/png');
+        
+        // Ukuran standar kertas F4 / Folio (Indonesia): 215 mm x 330 mm
         const pdf = new jsPDF({
           orientation: 'portrait',
           unit: 'mm',
-          format: 'a4',
+          format: [215, 330],
         });
 
-        const imgProps = pdf.getImageProperties(imgData);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
 
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`Lelayu_${data.name || 'Tanpa_Nama'}.pdf`);
+        const imgProps = pdf.getImageProperties(imgData);
+        const imgWidth = imgProps.width;
+        const imgHeight = imgProps.height;
+
+        // Hitung skala agar pas sempurna di 1 lembar F4 tanpa terpotong
+        const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
+        const renderWidth = imgWidth * ratio;
+        const renderHeight = imgHeight * ratio;
+
+        // Posisikan presisi di tengah
+        const xOffset = (pageWidth - renderWidth) / 2;
+        const yOffset = 0;
+
+        pdf.addImage(imgData, 'PNG', xOffset, yOffset, renderWidth, renderHeight);
+        pdf.save(`Lelayu_${data.name ? data.name.replace(/\s+/g, '_') : 'Tanpa_Nama'}_F4.pdf`);
       } catch (error) {
         console.error('Error generating PDF:', error);
       } finally {
         setIsGenerating(false);
         if (wasInEdit) setActiveTab('edit');
       }
-    }, 100);
+    }, 150);
   };
 
   return (
@@ -175,7 +188,7 @@ export default function App() {
             ) : (
               <Download className="w-4 h-4" />
             )}
-            <span className="hidden sm:inline">Simpan PDF</span>
+            <span className="hidden sm:inline">Simpan PDF (F4)</span>
           </button>
         </div>
       </header>
@@ -479,20 +492,20 @@ export default function App() {
               exit={{ opacity: 0, x: -10 }}
               className="flex justify-center"
             >
-              {/* A4 Paper Container */}
+              {/* F4 (Folio) Paper Container */}
               <div className="bg-stone-200 p-4 sm:p-8 rounded-lg shadow-inner overflow-auto max-w-full">
                 <div
                   ref={previewRef}
                   className="bg-white shadow-2xl mx-auto"
                   style={{
-                    width: '210mm',
-                    minHeight: '297mm',
-                    padding: '10mm 15mm',
+                    width: '215mm',
+                    minHeight: '330mm',
+                    padding: '12mm 15mm',
                     boxSizing: 'border-box',
                     fontFamily: '"Times New Roman", Times, serif',
                     color: '#000',
-                    lineHeight: data.mourners.length > 15 ? '1.3' : '1.4',
-                    fontSize: data.mourners.length > 20 ? '0.75rem' : data.mourners.length > 15 ? '0.85rem' : data.mourners.length > 10 ? '0.95rem' : '1rem'
+                    lineHeight: data.mourners.length > 15 ? '1.25' : data.mourners.length > 8 ? '1.35' : '1.4',
+                    fontSize: data.mourners.length > 20 ? '0.8rem' : data.mourners.length > 15 ? '0.88rem' : data.mourners.length > 8 ? '0.95rem' : '1.02rem',
                   }}
                 >
                   <div className="text-center space-y-1 mb-4">
@@ -598,29 +611,30 @@ export default function App() {
 
                     <p className="italic text-xl pt-1">Wassalamu'alaikum Warahmatullahi Wabarakatuh</p>
 
-                    <div className="flex justify-between items-start pt-12">
-                      <div className="text-left">
-                        <p className="font-bold mb-1 text-lg">Ingkang nandhang sungkawa:</p>
-                        <div className="space-y-0.5 pl-4 text-base">
-                          {data.mourners.map((m, i) => (
-                            <div key={m.id} className="flex gap-4">
-                              <span className="w-4">{i + 1}.</span>
-                              <span className="flex-1">{m.name}</span>
-                              <span className="w-32">{m.relation ? `(${m.relation})` : ''}</span>
-                            </div>
-                          ))}
-                          {data.communityMourner && (
-                            <div className="flex gap-4">
-                              <span className="w-4">{data.mourners.length + 1}.</span>
-                              <span className="flex-1">Keluarga Masyarakat {data.communityMourner}</span>
-                              <span className="w-32"></span>
-                            </div>
-                          )}
-                        </div>
+                    <div className="text-left pt-6">
+                      <p className="font-bold mb-1 text-lg">Ingkang nandhang sungkawa:</p>
+                      <div className="space-y-0.5 pl-4 text-base">
+                        {data.mourners.map((m, i) => (
+                          <div key={m.id} className="flex gap-4">
+                            <span className="w-4">{i + 1}.</span>
+                            <span className="flex-1">{m.name}</span>
+                            <span className="w-32">{m.relation ? `(${m.relation})` : ''}</span>
+                          </div>
+                        ))}
+                        {data.communityMourner && (
+                          <div className="flex gap-4">
+                            <span className="w-4">{data.mourners.length + 1}.</span>
+                            <span className="flex-1">Keluarga Masyarakat {data.communityMourner}</span>
+                            <span className="w-32"></span>
+                          </div>
+                        )}
                       </div>
-                      
-                      <div className="text-center pt-32 pr-8">
-                        <p className="text-lg mb-24">Ketua Pemuda</p>
+                    </div>
+
+                    {/* Tanda Tangan: Selalu di bawah keluarga masyarakat tegalsari di pojok kanan */}
+                    <div className="flex justify-end pt-6 pr-8">
+                      <div className="text-center min-w-[200px]">
+                        <p className={`text-lg ${data.mourners.length > 8 ? 'mb-10' : 'mb-14'}`}>Ketua Pemuda</p>
                         <p className="text-lg font-bold">( ............................ )</p>
                       </div>
                     </div>
