@@ -609,30 +609,31 @@ export default function App() {
                       Pramila saking punika, mbok bilih nalika sugengipun almarhum{data.gender === 'Perempuan' ? 'ah' : ''} kagungan kalepatan dhumateng panjenengan sedaya, kulawarga nyuwunaken agunging pangapunten. Kulawarga ugi nyuwun tambahing pandonga, mugi almarhum{data.gender === 'Perempuan' ? 'ah' : ''} husnul khotimah, dipunapunten sedaya dosa-dosanipun, saha amal ibadahipun katampi ing ngarsanipun Allah SWT. Amin Ya Rabbal 'Alamin.
                     </p>
 
-                    <p className="italic text-xl pt-1">Wassalamu'alaikum Warahmatullahi Wabarakatuh</p>
-
-                    <div className="text-left pt-6">
+                    <div className="text-left pt-4">
                       <p className="font-bold mb-1 text-lg">Ingkang nandhang sungkawa:</p>
                       <div className="space-y-0.5 pl-4 text-base">
                         {data.mourners.map((m, i) => (
-                          <div key={m.id} className="flex gap-4">
-                            <span className="w-4">{i + 1}.</span>
-                            <span className="flex-1">{m.name}</span>
-                            <span className="w-32">{m.relation ? `(${m.relation})` : ''}</span>
+                          <div key={m.id} className="flex gap-2">
+                            <span className="w-5 shrink-0">{i + 1}.</span>
+                            <span>
+                              {m.name}
+                              {m.relation && <span className="ml-2">({m.relation})</span>}
+                            </span>
                           </div>
                         ))}
                         {data.communityMourner && (
-                          <div className="flex gap-4">
-                            <span className="w-4">{data.mourners.length + 1}.</span>
-                            <span className="flex-1">Keluarga Masyarakat {data.communityMourner}</span>
-                            <span className="w-32"></span>
+                          <div className="flex gap-2">
+                            <span className="w-5 shrink-0">{data.mourners.length + 1}.</span>
+                            <span>Keluarga Masyarakat {data.communityMourner}</span>
                           </div>
                         )}
                       </div>
                     </div>
 
+                    <p className="italic text-xl pt-3">Wassalamu'alaikum Warahmatullahi Wabarakatuh</p>
+
                     {/* Tanda Tangan: Selalu di bawah keluarga masyarakat tegalsari di pojok kanan */}
-                    <div className="flex justify-end pt-6 pr-8">
+                    <div className="flex justify-end pt-4 pr-8">
                       <div className="text-center min-w-[200px]">
                         <p className={`text-lg ${data.mourners.length > 8 ? 'mb-10' : 'mb-14'}`}>Ketua Pemuda</p>
                         <p className="text-lg font-bold">( ............................ )</p>
