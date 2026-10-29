@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from 'react';
-import { Download, Plus, Trash2, Printer, FileText, User, Calendar, MapPin, Info, Edit3, Eye } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Download, Plus, Trash2, Printer, FileText, User, Calendar, MapPin, Info, Edit3, Eye, RotateCcw, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -33,6 +33,8 @@ interface LelayuData {
   communityMourner: string;
 }
 
+const STORAGE_KEY = 'lelayu_digital_data_v1';
+
 const initialData: LelayuData = {
   origin: 'Dukuh Tegalsari RT 01/RW 09, Wonoboyo, Jogonalan, Klaten',
   name: '',
@@ -52,11 +54,45 @@ const initialData: LelayuData = {
 };
 
 export default function App() {
-  const [data, setData] = useState<LelayuData>(initialData);
+  const [data, setData] = useState<LelayuData>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return { ...initialData, ...parsed };
+      }
+    } catch (e) {
+      console.error('Error loading saved lelayu data', e);
+    }
+    return initialData;
+  });
+
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isSaved, setIsSaved] = useState(true);
   const previewRef = useRef<HTMLDivElement>(null);
+
+  // Simpan otomatis ke localStorage setiap kali ada perubahan
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      setIsSaved(true);
+    } catch (e) {
+      console.error('Error saving lelayu data to localStorage', e);
+    }
+  }, [data]);
+
+  const handleReset = () => {
+    setData(initialData);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      console.error(e);
+    }
+    setShowResetConfirm(false);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -178,18 +214,54 @@ export default function App() {
             </button>
           </div>
 
-          <button
-            onClick={generatePDF}
-            disabled={isGenerating}
-            className="flex items-center gap-2 bg-stone-900 hover:bg-stone-800 disabled:bg-stone-400 text-white px-4 py-2 rounded-full transition-all text-sm font-medium"
-          >
-            {isGenerating ? (
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          <div className="flex items-center gap-2">
+            {/* Auto-save status indicator */}
+            <div className="hidden md:flex items-center gap-1.5 text-xs text-stone-500 bg-stone-50 px-2.5 py-1 rounded-full border border-stone-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <span>Tersimpan otomatis</span>
+            </div>
+
+            {/* Tombol Reset / Buat Baru */}
+            {showResetConfirm ? (
+              <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 text-xs px-2.5 py-1 rounded-full">
+                <span className="text-red-700 font-medium">Reset form?</span>
+                <button
+                  onClick={handleReset}
+                  className="text-red-600 hover:text-red-800 font-bold underline px-1"
+                >
+                  Ya
+                </button>
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="text-stone-500 hover:text-stone-700 px-1"
+                >
+                  Batal
+                </button>
+              </div>
             ) : (
-              <Download className="w-4 h-4" />
+              <button
+                onClick={() => setShowResetConfirm(true)}
+                title="Kosongkan form untuk membuat baru"
+                className="flex items-center gap-1 text-xs text-stone-500 hover:text-stone-800 bg-stone-100 hover:bg-stone-200 px-2.5 py-1.5 rounded-full transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Reset Form</span>
+              </button>
             )}
-            <span className="hidden sm:inline">Simpan PDF (F4)</span>
-          </button>
+
+            <button
+              onClick={generatePDF}
+              disabled={isGenerating}
+              className="flex items-center gap-2 bg-stone-900 hover:bg-stone-800 disabled:bg-stone-400 text-white px-4 py-2 rounded-full transition-all text-sm font-medium"
+            >
+              {isGenerating ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline">Simpan PDF (F4)</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -611,22 +683,28 @@ export default function App() {
 
                     <div className="text-left pt-4">
                       <p className="font-bold mb-1 text-lg">Ingkang nandhang sungkawa:</p>
-                      <div className="space-y-0.5 pl-4 text-base">
-                        {data.mourners.map((m, i) => (
-                          <div key={m.id} className="flex gap-2">
-                            <span className="w-5 shrink-0">{i + 1}.</span>
-                            <span>
-                              {m.name}
-                              {m.relation && <span className="ml-2">({m.relation})</span>}
-                            </span>
-                          </div>
-                        ))}
-                        {data.communityMourner && (
-                          <div className="flex gap-2">
-                            <span className="w-5 shrink-0">{data.mourners.length + 1}.</span>
-                            <span>Keluarga Masyarakat {data.communityMourner}</span>
-                          </div>
-                        )}
+                      <div className="pl-4 text-base">
+                        <table className="border-collapse">
+                          <tbody>
+                            {data.mourners.map((m, i) => (
+                              <tr key={m.id} className="align-baseline">
+                                <td className="w-6 pr-2 py-0.5 select-none text-left">{i + 1}.</td>
+                                <td className="pr-8 py-0.5 text-left whitespace-nowrap">{m.name}</td>
+                                <td className="py-0.5 text-left whitespace-nowrap">
+                                  {m.relation ? `(${m.relation})` : ''}
+                                </td>
+                              </tr>
+                            ))}
+                            {data.communityMourner && (
+                              <tr className="align-baseline">
+                                <td className="w-6 pr-2 py-0.5 select-none text-left">{data.mourners.length + 1}.</td>
+                                <td colSpan={2} className="py-0.5 text-left">
+                                  Keluarga Masyarakat {data.communityMourner}
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
 
